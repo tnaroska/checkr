@@ -10,3 +10,4 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+ghcs-test.2019-08-28.private-key.pem

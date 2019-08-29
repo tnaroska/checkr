@@ -1,0 +1,19 @@
+---
+engine_enable_code_mutation: true
+engine_cmd_compile:
+  - 'GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.goos=darwin -X main.goarch=amd64" -o checkr-darwin-amd64 -tags "static" $(go list ./cmd/...)'
+  - 'chmod +x checkr-darwin-amd64'
+  - 'GOOS=linux GOARCH=amd64 go build -ldflags "-X main.goos=linux -X main.goarch=amd64" -o checkr-linux-amd64 -tags "static" $(go list ./cmd/...)'
+  - 'chmod +x checkr-linux-amd64'
+  - 'GOOS=windows GOARCH=amd64 go build -ldflags "-X main.goos=windows -X main.goarch=amd64" -o checkr-windows-amd64.exe -tags "static" $(go list ./cmd/...)'
+
+engine_cmd_test: 'go test -v -tags "static" $(go list ./... | grep -v /vendor/)'
+engine_cmd_lint: 'gometalinter.v2 --vendor --config=gometalinter.json ./...'
+scm_enable_branch_cleanup: true
+scm_release_assets:
+  - local_path: checkr-linux-amd64
+    artifact_name: checkr-linux-amd64
+  - local_path: checkr-darwin-amd64
+    artifact_name: checkr-darwin-amd64
+  - local_path: checkr-windows-amd64.exe
+    artifact_name: checkr-windows-amd64.exe

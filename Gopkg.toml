@@ -24,9 +24,9 @@
 #   go-tests = true
 #   unused-packages = true
 
-#[[constraint]]
-#  branch = "v2"
-#  name = "gopkg.in/urfave/cli.v2"
+[[constraint]]
+  branch = "v2"
+  name = "gopkg.in/urfave/cli.v2"
 
 [[constraint]]
   name = "github.com/spf13/viper"

@@ -5,12 +5,112 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/analogj/drawbridge/pkg/actions"
+	"github.com/analogj/drawbridge/pkg/project"
 	"github.com/analogj/ghcs/pkg/client"
 	"github.com/analogj/ghcs/pkg/config"
+	"github.com/analogj/ghcs/pkg/utils"
+	"github.com/analogj/ghcs/pkg/version"
+	"github.com/fatih/color"
 	"github.com/google/go-github/github"
+	"gopkg.in/urfave/cli.v2"
+	"log"
+	"os"
+	"strings"
+	"time"
 )
 
+var goos string
+var goarch string
+
 func main() {
+
+	config, err := config.Create()
+	if err != nil {
+		fmt.Printf("FATAL: %+v\n", err)
+		os.Exit(1)
+	}
+
+	app := &cli.App{
+		Name:     "ghcs",
+		Usage:    "Github Check Suite CLI",
+		Version:  version.VERSION,
+		Compiled: time.Now(),
+		Authors: []*cli.Author{
+			{
+				Name:  "Jason Kulatunga",
+				Email: "jason@thesparktree.com",
+			},
+		},
+		Before: func(c *cli.Context) error {
+
+			ghcsRepo := "github.com/AnalogJ/ghcs"
+
+			var versionInfo string
+			if len(goos) > 0 && len(goarch) > 0 {
+				versionInfo = fmt.Sprintf("%s.%s-%s", goos, goarch, version.VERSION)
+			} else {
+				versionInfo = fmt.Sprintf("dev-%s", version.VERSION)
+			}
+
+			subtitle := ghcsRepo + utils.LeftPad2Len(versionInfo, " ", 65-len(ghcsRepo))
+
+			color.New(color.FgGreen).Fprintf(c.App.Writer, fmt.Sprintf(utils.StripIndent(
+				`
+			  ooooooo8 ooooo ooooo  oooooooo8  oooooooo8  
+			o888    88  888   888 o888     88 888         
+			888    oooo 888ooo888 888          888oooooo  
+			888o    88  888   888 888o     oo         888 
+			 888ooo888 o888o o888o 888oooo88  o88oooo888
+			%s
+
+			`), subtitle))
+
+			return nil
+		},
+
+		Commands: []*cli.Command{
+			{
+				Name:  "create",
+				Usage: "Create a Github Check run",
+				//UsageText:   "doo - does the dooing",
+				Action: func(c *cli.Context) error {
+					fmt.Fprintln(c.App.Writer, c.Command.Usage)
+
+					projectList, err := project.CreateProjectListFromProvidedAnswers(config)
+					if err != nil {
+						return err
+					}
+
+					answerData := map[string]interface{}{}
+					if projectList.Length() > 0 && utils.StdinQueryBoolean(fmt.Sprintf("Would you like to create a Drawbridge config using preconfigured answers? (%v available). [yes/no]", projectList.Length())) {
+
+						answerData, err = projectList.Prompt("Enter number to base your configuration from")
+						if err != nil {
+							return err
+						}
+					}
+
+					//extend current answerData with CLI provided options.
+					cliAnswers, err := createFlagHandler(config, answerData, c.FlagNames(), c)
+					if err != nil {
+						return err
+					}
+
+					createAction := actions.CreateAction{Config: config}
+					return createAction.Start(cliAnswers, c.Bool("dryrun"))
+				},
+			},
+		},
+	}
+
+	err = app.Run(os.Args)
+	if err != nil {
+		log.Fatal(color.HiRedString("ERROR: %v", err))
+	}
+}
+
+func main2() {
 
 	ctx := context.Background()
 

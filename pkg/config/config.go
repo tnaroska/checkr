@@ -25,6 +25,7 @@ type configuration struct {
 func (c *configuration) Init() error {
 	c.Viper = viper.New()
 	//set defaults
+	c.SetDefault("details_url", "")
 
 	// Base URL for API requests. Defaults to the public GitHub API, but can be
 	// set to a domain endpoint to use with GitHub Enterprise. BaseURL should
@@ -45,12 +46,16 @@ func (c *configuration) Init() error {
 	//CLI options will be added via the `Set()` function
 
 	fmt.Printf("%s", c.AllSettings())
-	return c.ValidateConfig()
+	return nil
 
 }
 
 // This function ensures that the merged config works correctly.
 func (c *configuration) ValidateConfig() error {
+
+	if !c.IsSet("pr") && !c.IsSet("sha") {
+		return errors.New("Required flag/environmental variable \"pr\" or \"sha\" is not set")
+	}
 
 	if !c.IsSet("app_id") {
 		return errors.New("GHCS_APP_ID is required")
@@ -58,6 +63,11 @@ func (c *configuration) ValidateConfig() error {
 
 	if !c.IsSet("private_key") && !c.IsSet("private_key_path") {
 		return errors.New("GHCS_PRIVATE_KEY or GHCS_PRIVATE_KEY_PATH is required")
+	}
+
+	baseUrl := c.GetString("base_url")
+	if !(baseUrl[len(baseUrl)-1:] == "/") {
+		return errors.New("GHCS_BASE_URL must include trailing slash '/'")
 	}
 
 	return nil

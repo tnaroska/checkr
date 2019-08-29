@@ -74,21 +74,31 @@ func main() {
 				Action: func(c *cli.Context) error {
 					fmt.Fprintln(c.App.Writer, c.Command.Usage)
 
-					if !c.IsSet("pr") && !c.IsSet("sha") {
-						return errors.New("Required flag \"pr\" or \"sha\" is not set")
-					} else if c.IsSet("pr") {
+					if c.IsSet("pr") {
 						config.Set("pr", c.Int("pr"))
-					} else {
+					} else if c.IsSet("sha") {
 						config.Set("sha", c.String("sha"))
 					}
 
 					config.Set("org", c.String("org"))
 					config.Set("repo", c.String("repo"))
 
-					//TODO move validation into Config validate function.
+					payloadPath, err := utils.ExpandPath(c.String("payload-path"))
+					if err != nil {
+						return err
+					}
+
+					if !utils.FileExists(payloadPath) {
+						return errors.New(fmt.Sprintf("payload path invalid. Please ensure that file exists: %s", payloadPath))
+					}
+
+					err = config.ValidateConfig()
+					if err != nil {
+						return err
+					}
 
 					runAction := actions.RunAction{Config: config}
-					return runAction.Create()
+					return runAction.Create(payloadPath)
 				},
 				Flags: []cli.Flag{
 					&cli.StringFlag{
@@ -114,6 +124,12 @@ func main() {
 					&cli.StringFlag{
 						Name:  "url",
 						Usage: "Provide an optional link that will be set in the Check run as the `detail_url`",
+					},
+
+					&cli.StringFlag{
+						Name:     "payload-path",
+						Required: true,
+						Usage:    "Provide the Github Check Run compatible JSON payload. See: https://developer.github.com/v3/checks/runs/#create-a-check-run",
 					},
 				},
 			},

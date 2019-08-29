@@ -2,7 +2,9 @@ package actions
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 
 	"github.com/analogj/checkr/pkg/client"
 	"github.com/analogj/checkr/pkg/config"
@@ -13,7 +15,21 @@ type RunAction struct {
 	Config config.Interface
 }
 
-func (r *RunAction) Create() error {
+func (r *RunAction) Create(payloadPath string) error {
+
+	payloadData, err := ioutil.ReadFile(payloadPath)
+	if err != nil {
+		fmt.Printf("error: %s", err)
+		return err
+	}
+
+	var checkRun github.CreateCheckRunOptions
+
+	err = json.Unmarshal(payloadData, &checkRun)
+	if err != nil {
+		fmt.Printf("error: %s", err)
+		return err
+	}
 
 	ctx := context.Background()
 
@@ -48,62 +64,70 @@ func (r *RunAction) Create() error {
 		headSha = r.Config.GetString("headSha")
 	}
 
-	var detailsUrl = "https://github.com/AnalogJ/ghcs"
-	var externalID = "externalUId"
-	var status = "in_progress"
+	//var detailsUrl = "https://github.com/AnalogJ/ghcs"
+	//var externalID = "externalUId"
+	//var status = "in_progress"
+	//
+	//var outputTitle = "output TItle2"
+	//var outputSummary = "output Summary2"
+	//var outputText = "# output Text2\n This is the output details2"
+	//
+	//var annPath = "README.md"
+	//var annStartLine = 1
+	//var annLevel = "notice"
+	//var annMessage = "message"
+	//var annTitle = "title"
+	//var annRawDetails = "Raw Details"
+	//
+	//var annPath2 = "cmd/test.go"
+	//var annStartLine2 = 5
+	//var annLevel2 = "notice"
+	//var annMessage2 = "this file is not changed, but has comment"
+	//var annTitle2 = "comment on unchanged file"
+	//var annRawDetails2 = "Raw Details WAZZUP"
+	//
+	//var outputAnnotations = []*github.CheckRunAnnotation{
+	//	{
+	//		Path:            &annPath,
+	//		StartLine:       &annStartLine,
+	//		EndLine:         &annStartLine,
+	//		AnnotationLevel: &annLevel,
+	//		Message:         &annMessage,
+	//		Title:           &annTitle,
+	//		RawDetails:      &annRawDetails,
+	//	},
+	//	{
+	//		Path:            &annPath2,
+	//		StartLine:       &annStartLine2,
+	//		EndLine:         &annStartLine2,
+	//		AnnotationLevel: &annLevel2,
+	//		Message:         &annMessage2,
+	//		Title:           &annTitle2,
+	//		RawDetails:      &annRawDetails2,
+	//	},
+	//}
 
-	var outputTitle = "output TItle2"
-	var outputSummary = "output Summary2"
-	var outputText = "# output Text2\n This is the output details2"
+	//github.CreateCheckRunOptions{
+	//	Name:       "test-app4",
+	//	HeadSHA:    headSha,
+	//	DetailsURL: &detailsUrl,
+	//	ExternalID: &externalID,
+	//	Status:     &status,
+	//	Output: &github.CheckRunOutput{
+	//		Title:       &outputTitle,
+	//		Summary:     &outputSummary,
+	//		Text:        &outputText,
+	//		Annotations: outputAnnotations,
+	//	},
+	//}
 
-	var annPath = "README.md"
-	var annStartLine = 1
-	var annLevel = "notice"
-	var annMessage = "message"
-	var annTitle = "title"
-	var annRawDetails = "Raw Details"
-
-	var annPath2 = "cmd/test.go"
-	var annStartLine2 = 5
-	var annLevel2 = "notice"
-	var annMessage2 = "this file is not changed, but has comment"
-	var annTitle2 = "comment on unchanged file"
-	var annRawDetails2 = "Raw Details WAZZUP"
-
-	var outputAnnotations = []*github.CheckRunAnnotation{
-		{
-			Path:            &annPath,
-			StartLine:       &annStartLine,
-			EndLine:         &annStartLine,
-			AnnotationLevel: &annLevel,
-			Message:         &annMessage,
-			Title:           &annTitle,
-			RawDetails:      &annRawDetails,
-		},
-		{
-			Path:            &annPath2,
-			StartLine:       &annStartLine2,
-			EndLine:         &annStartLine2,
-			AnnotationLevel: &annLevel2,
-			Message:         &annMessage2,
-			Title:           &annTitle2,
-			RawDetails:      &annRawDetails2,
-		},
+	checkRun.HeadSHA = headSha
+	if r.Config.IsSet("details_url") {
+		var detailsUrl = r.Config.GetString("details_url")
+		checkRun.DetailsURL = &detailsUrl
 	}
 
-	check, resp, err := appClient.Checks.CreateCheckRun(ctx, r.Config.GetString("org"), r.Config.GetString("repo"), github.CreateCheckRunOptions{
-		Name:       "test-app4",
-		HeadSHA:    headSha,
-		DetailsURL: &detailsUrl,
-		ExternalID: &externalID,
-		Status:     &status,
-		Output: &github.CheckRunOutput{
-			Title:       &outputTitle,
-			Summary:     &outputSummary,
-			Text:        &outputText,
-			Annotations: outputAnnotations,
-		},
-	})
+	check, resp, err := appClient.Checks.CreateCheckRun(ctx, r.Config.GetString("org"), r.Config.GetString("repo"), checkRun)
 
 	if err != nil {
 		fmt.Printf("error: %s", err)

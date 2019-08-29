@@ -13,3 +13,5 @@
 *.pem
 
 vendor/
+
+test-payload.json

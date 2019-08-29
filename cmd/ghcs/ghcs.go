@@ -5,43 +5,18 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/bradleyfalzon/ghinstallation"
+	"github.com/analogj/ghcs/pkg/client"
+	"github.com/analogj/ghcs/pkg/config"
 	"github.com/google/go-github/github"
-	"net/http"
 )
 
 func main() {
 
 	ctx := context.Background()
 
-	// Set here you application ID and installation id
-	appId := 39792
-	installationId := 1703770 //installation for Analogj/golang_analogj_test
+	appConfig, err := config.Create()
 
-	// Wrap the shared transport for use with defined application and installation IDs
-	jwtTransport, err := ghinstallation.NewAppsTransportKeyFromFile(http.DefaultTransport, appId, "/Users/jason/repos/gopath/src/github.com/analogj/ghcs/ghcs-test.2019-08-28.private-key.pem")
-	if err != nil {
-		fmt.Printf("err: %s", err)
-	}
-
-	// Use installation transport with jwtClient
-	// NewClient returns a new GitHub API jwtClient.
-	// If a nil httpClient is provided, http.DefaultClient will be used. To use API methods which require authentication,
-	// provide an http.Client that will perform the authentication for you.
-	jwtClient := github.NewClient(&http.Client{Transport: jwtTransport})
-
-	appTransport, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, appId, installationId, "/Users/jason/repos/gopath/src/github.com/analogj/ghcs/ghcs-test.2019-08-28.private-key.pem")
-	if err != nil {
-		fmt.Printf("err: %s", err)
-	}
-	appClient := github.NewClient(&http.Client{Transport: appTransport})
-
-	access_token, err := appTransport.Token()
-	if err != nil {
-		fmt.Printf("err: %s", err)
-	}
-
-	fmt.Printf("Installation access token: %s", access_token)
+	jwtClient, err := client.GetJwtClient(appConfig)
 
 	// Get org installation
 	appService := jwtClient.Apps
@@ -49,11 +24,11 @@ func main() {
 	if err != nil {
 		fmt.Printf("error: %s", err)
 	}
-	//installations, resp, err := appService.ListInstallations(ctx, nil)
 	fmt.Print(resp)
 	fmt.Print(appInst)
 
 	//Get Pull requests
+	appClient, err := client.GetAppClient(appConfig, int(*appInst.ID))
 
 	list, _, err := appClient.PullRequests.List(ctx, "AnalogJ", "golang_analogj_test", &github.PullRequestListOptions{})
 
@@ -138,7 +113,7 @@ func main() {
 	}
 
 	/// TOOD: write a file to a github branch using the commits api
-	created, resp, err := appClient.Repositories.CreateFile(ctx, "AnalogJ", "golang_analogj_test", "netnew8.txt", &github.RepositoryContentFileOptions{
+	created, resp, err := appClient.Repositories.CreateFile(ctx, "AnalogJ", "golang_analogj_test", "netnew11.txt", &github.RepositoryContentFileOptions{
 		Message:   &createMessage,
 		Content:   []byte("This is my content in a byte array,"),
 		Branch:    &createBranch,

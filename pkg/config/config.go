@@ -1,6 +1,8 @@
 package config
 
 import (
+	"errors"
+	"fmt"
 	"github.com/spf13/viper"
 )
 
@@ -23,20 +25,21 @@ type configuration struct {
 func (c *configuration) Init() error {
 	c.Viper = viper.New()
 	//set defaults
-	c.SetDefault("options.config_dir", "~/.ssh/drawbridge")
-	c.SetDefault("options.pem_dir", "~/.ssh/drawbridge/pem")
-	c.SetDefault("options.active_config_template", "default")
 
-	c.SetDefault("options.active_custom_templates", []string{})
-	c.SetDefault("options.ui_group_priority", []string{"environment", "stack_name", "shard", "shard_type"})
-	c.SetDefault("options.ui_question_hidden", []string{})
+	// Base URL for API requests. Defaults to the public GitHub API, but can be
+	// set to a domain endpoint to use with GitHub Enterprise. BaseURL should
+	// always be specified with a trailing slash.
+	c.SetDefault("base_url", "")
 
-	//if you want to load a non-standard location system config file (~/drawbridge.yml), use ReadConfig
-	c.SetConfigType("yaml")
+	c.AutomaticEnv()
+	c.SetEnvPrefix("GHCS")
+
 	//c.SetConfigName("drawbridge")
 	//c.AddConfigPath("$HOME/")
 
 	//CLI options will be added via the `Set()` function
+
+	fmt.Printf("%s", c.AllSettings())
 	return c.ValidateConfig()
 
 }
@@ -44,24 +47,13 @@ func (c *configuration) Init() error {
 // This function ensures that the merged config works correctly.
 func (c *configuration) ValidateConfig() error {
 
-	////deserialize Questions
-	//questionsMap := map[string]Question{}
-	//err := c.UnmarshalKey("questions", &questionsMap)
-	//
-	//if err != nil {
-	//	log.Printf("questions could not be deserialized correctly. %v", err)
-	//	return err
-	//}
-	//
-	//for _, v := range questionsMap {
-	//
-	//	typeContent, ok := v.Schema["type"].(string)
-	//	if !ok || len(typeContent) == 0 {
-	//		return errors.QuestionSyntaxError("`type` is required for questions")
-	//	}
-	//}
-	//
-	//
+	if !c.IsSet("app_id") {
+		return errors.New("GHCS_APP_ID is required")
+	}
+
+	if !c.IsSet("private_key") && !c.IsSet("private_key_path") {
+		return errors.New("GHCS_PRIVATE_KEY or GHCS_PRIVATE_KEY_PATH is required")
+	}
 
 	return nil
 }

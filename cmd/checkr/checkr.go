@@ -72,7 +72,7 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:  "create",
-				Usage: "Create a Github Check run",
+				Usage: "Create a Github Check Run",
 				//UsageText:   "doo - does the dooing",
 				Action: func(c *cli.Context) error {
 					fmt.Fprintln(c.App.Writer, c.Command.Usage)

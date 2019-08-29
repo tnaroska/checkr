@@ -29,7 +29,7 @@ func main() {
 	}
 
 	app := &cli.App{
-		Name:     "ghcs",
+		Name:     "checkr",
 		Usage:    "Github Check Suite CLI",
 		Version:  version.VERSION,
 		Compiled: time.Now(),

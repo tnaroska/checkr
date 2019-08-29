@@ -39,7 +39,7 @@ func (c *configuration) Init() error {
 	c.SetDefault("sha", "")
 
 	c.AutomaticEnv()
-	c.SetEnvPrefix("GHCS")
+	c.SetEnvPrefix("CHECKR")
 
 	if c.IsSet("private_key_path") {
 		privateKeyPath, err := utils.ExpandPath(c.GetString("private_key_path"))
@@ -47,7 +47,7 @@ func (c *configuration) Init() error {
 			return err
 		}
 		if !utils.FileExists(privateKeyPath) {
-			return errors.New("GHCS_PRIVATE_KEY_PATH is invalid")
+			return errors.New("CHECKR_PRIVATE_KEY_PATH is invalid")
 		}
 		c.Set("private_key_path", privateKeyPath)
 	}
@@ -65,16 +65,16 @@ func (c *configuration) ValidateConfig() error {
 	}
 
 	if !c.IsSet("app_id") {
-		return errors.New("GHCS_APP_ID is required")
+		return errors.New("CHECKR_APP_ID is required")
 	}
 
 	if !c.IsSet("private_key") && !c.IsSet("private_key_path") {
-		return errors.New("GHCS_PRIVATE_KEY or GHCS_PRIVATE_KEY_PATH is required")
+		return errors.New("CHECKR_PRIVATE_KEY or CHECKR_PRIVATE_KEY_PATH is required")
 	}
 
 	baseUrl := c.GetString("base_url")
 	if !(baseUrl[len(baseUrl)-1:] == "/") {
-		return errors.New("GHCS_BASE_URL must include trailing slash '/'")
+		return errors.New("CHECKR_BASE_URL must include trailing slash '/'")
 	}
 
 	return nil

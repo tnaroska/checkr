@@ -2,10 +2,13 @@ package client
 
 import (
 	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+
 	"github.com/analogj/checkr/pkg/config"
 	"github.com/bradleyfalzon/ghinstallation"
 	"github.com/google/go-github/github"
-	"net/http"
 )
 
 func GetJwtClient(appConfig config.Interface) (*github.Client, error) {
@@ -20,6 +23,8 @@ func GetJwtClient(appConfig config.Interface) (*github.Client, error) {
 		jwtTransport, err = ghinstallation.NewAppsTransport(http.DefaultTransport, appId, []byte(appConfig.GetString("PRIVATE_KEY")))
 	}
 
+	jwtTransport.BaseURL = strings.TrimSuffix(appConfig.GetString("base_url"), "/")
+
 	if err != nil {
 		fmt.Printf("err: %s", err)
 		return nil, err
@@ -29,8 +34,15 @@ func GetJwtClient(appConfig config.Interface) (*github.Client, error) {
 	// NewClient returns a new GitHub API jwtClient.
 	// If a nil httpClient is provided, http.DefaultClient will be used. To use API methods which require authentication,
 	// provide an http.Client that will perform the authentication for you.
-	return github.NewClient(&http.Client{Transport: jwtTransport}), nil
+	jwtClient := github.NewClient(&http.Client{Transport: jwtTransport})
 
+	jwtClient.BaseURL, err = url.Parse(appConfig.GetString("base_url"))
+	if err != nil {
+		fmt.Printf("err: %s", err)
+		return nil, err
+	}
+
+	return jwtClient, nil
 }
 
 func GetAppClient(appConfig config.Interface, installationId int) (*github.Client, error) {
@@ -44,6 +56,8 @@ func GetAppClient(appConfig config.Interface, installationId int) (*github.Clien
 		appTransport, err = ghinstallation.New(http.DefaultTransport, appId, installationId, []byte(appConfig.GetString("PRIVATE_KEY")))
 	}
 
+	appTransport.BaseURL = strings.TrimSuffix(appConfig.GetString("base_url"), "/")
+
 	if err != nil {
 		fmt.Printf("err: %s", err)
 		return nil, err
@@ -51,12 +65,19 @@ func GetAppClient(appConfig config.Interface, installationId int) (*github.Clien
 	}
 	appClient := github.NewClient(&http.Client{Transport: appTransport})
 
-	access_token, err := appTransport.Token()
+	appClient.BaseURL, err = url.Parse(appConfig.GetString("base_url"))
+
 	if err != nil {
 		fmt.Printf("err: %s", err)
 		return nil, err
 	}
 
-	fmt.Printf("Installation access token: %s", access_token)
+	//access_token, err := appTransport.Token()
+	//if err != nil {
+	//	fmt.Printf("err: %s", err)
+	//	return nil, err
+	//}
+	//
+	//fmt.Printf("Installation access token: %s", access_token)
 	return appClient, nil
 }

@@ -37,12 +37,12 @@ func (r *RunAction) Create() error {
 	var headSha string
 	if !r.Config.IsSet("headSha") {
 		prData, _, err := appClient.PullRequests.Get(ctx, r.Config.GetString("org"), r.Config.GetString("repo"), r.Config.GetInt("pr"))
-		headSha = *prData.Head.SHA
 		if err != nil {
 			fmt.Printf("error: %s", err)
 			return err
 		}
 
+		headSha = *prData.Head.SHA
 		fmt.Printf("Found HEAD SHA: %s", headSha)
 	} else {
 		headSha = r.Config.GetString("headSha")

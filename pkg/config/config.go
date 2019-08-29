@@ -29,7 +29,8 @@ func (c *configuration) Init() error {
 	// Base URL for API requests. Defaults to the public GitHub API, but can be
 	// set to a domain endpoint to use with GitHub Enterprise. BaseURL should
 	// always be specified with a trailing slash.
-	c.SetDefault("base_url", "")
+	c.SetDefault("base_url", "https://api.github.com/")
+
 	c.SetDefault("org", "")
 	c.SetDefault("repo", "")
 	c.SetDefault("pr", "")

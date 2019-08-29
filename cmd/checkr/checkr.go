@@ -85,6 +85,8 @@ func main() {
 					config.Set("org", c.String("org"))
 					config.Set("repo", c.String("repo"))
 
+					//TODO move validation into Config validate function.
+
 					runAction := actions.RunAction{Config: config}
 					return runAction.Create()
 				},

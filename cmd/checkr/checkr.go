@@ -3,21 +3,18 @@ package main
 // with go modules disabled
 
 import (
-	"context"
+	"errors"
 	"fmt"
-	"github.com/analogj/drawbridge/pkg/actions"
-	"github.com/analogj/drawbridge/pkg/project"
-	"github.com/analogj/ghcs/pkg/client"
-	"github.com/analogj/ghcs/pkg/config"
-	"github.com/analogj/ghcs/pkg/utils"
-	"github.com/analogj/ghcs/pkg/version"
-	"github.com/fatih/color"
-	"github.com/google/go-github/github"
-	"gopkg.in/urfave/cli.v2"
 	"log"
 	"os"
-	"strings"
 	"time"
+
+	"github.com/analogj/checkr/pkg/actions"
+	"github.com/analogj/checkr/pkg/config"
+	"github.com/analogj/checkr/pkg/utils"
+	"github.com/analogj/checkr/pkg/version"
+	"github.com/fatih/color"
+	"github.com/urfave/cli"
 )
 
 var goos string
@@ -36,7 +33,7 @@ func main() {
 		Usage:    "Github Check Suite CLI",
 		Version:  version.VERSION,
 		Compiled: time.Now(),
-		Authors: []*cli.Author{
+		Authors: []cli.Author{
 			{
 				Name:  "Jason Kulatunga",
 				Email: "jason@thesparktree.com",
@@ -44,7 +41,7 @@ func main() {
 		},
 		Before: func(c *cli.Context) error {
 
-			ghcsRepo := "github.com/AnalogJ/ghcs"
+			ghcsRepo := "github.com/AnalogJ/checkr"
 
 			var versionInfo string
 			if len(goos) > 0 && len(goarch) > 0 {
@@ -69,7 +66,7 @@ func main() {
 			return nil
 		},
 
-		Commands: []*cli.Command{
+		Commands: []cli.Command{
 			{
 				Name:  "create",
 				Usage: "Create a Github Check Run",
@@ -77,28 +74,45 @@ func main() {
 				Action: func(c *cli.Context) error {
 					fmt.Fprintln(c.App.Writer, c.Command.Usage)
 
-					projectList, err := project.CreateProjectListFromProvidedAnswers(config)
-					if err != nil {
-						return err
+					if !c.IsSet("pr") && !c.IsSet("sha") {
+						return errors.New("Required flag \"pr\" or \"sha\" is not set")
+					} else if c.IsSet("pr") {
+						config.Set("pr", c.Int("pr"))
+					} else {
+						config.Set("sha", c.String("sha"))
 					}
 
-					answerData := map[string]interface{}{}
-					if projectList.Length() > 0 && utils.StdinQueryBoolean(fmt.Sprintf("Would you like to create a Drawbridge config using preconfigured answers? (%v available). [yes/no]", projectList.Length())) {
+					config.Set("org", c.String("org"))
+					config.Set("repo", c.String("repo"))
 
-						answerData, err = projectList.Prompt("Enter number to base your configuration from")
-						if err != nil {
-							return err
-						}
-					}
+					runAction := actions.RunAction{Config: config}
+					return runAction.Create()
+				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "org, o",
+						Usage:    "Github repository owner/organization name",
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:     "repo, r",
+						Usage:    "Github repository name",
+						Required: true,
+					},
 
-					//extend current answerData with CLI provided options.
-					cliAnswers, err := createFlagHandler(config, answerData, c.FlagNames(), c)
-					if err != nil {
-						return err
-					}
+					&cli.StringFlag{
+						Name:  "pr",
+						Usage: "Github pull request number (required if sha is not provided)",
+					},
+					&cli.StringFlag{
+						Name:  "sha",
+						Usage: "Github pull request head SHA (required if pr is not provided)",
+					},
 
-					createAction := actions.CreateAction{Config: config}
-					return createAction.Start(cliAnswers, c.Bool("dryrun"))
+					&cli.StringFlag{
+						Name:  "url",
+						Usage: "Provide an optional link that will be set in the Check run as the `detail_url`",
+					},
 				},
 			},
 		},
@@ -110,119 +124,32 @@ func main() {
 	}
 }
 
-func main2() {
-
-	ctx := context.Background()
-
-	appConfig, err := config.Create()
-
-	jwtClient, err := client.GetJwtClient(appConfig)
-
-	// Get org installation
-	appService := jwtClient.Apps
-	appInst, resp, err := appService.FindRepositoryInstallation(ctx, "AnalogJ", "golang_analogj_test")
-	if err != nil {
-		fmt.Printf("error: %s", err)
-	}
-	fmt.Print(resp)
-	fmt.Print(appInst)
-
-	//Get Pull requests
-	appClient, err := client.GetAppClient(appConfig, int(*appInst.ID))
-
-	list, _, err := appClient.PullRequests.List(ctx, "AnalogJ", "golang_analogj_test", &github.PullRequestListOptions{})
-
-	if err != nil {
-		fmt.Printf("error: %s", err)
-	}
-
-	fmt.Print(list)
-
-	var detailsUrl = "https://github.com/AnalogJ/ghcs"
-	var externalID = "externalUId"
-	var status = "in_progress"
-
-	var outputTitle = "output TItle2"
-	var outputSummary = "output Summary2"
-	var outputText = "# output Text2\n This is the output details2"
-
-	var annPath = "README.md"
-	var annStartLine = 1
-	var annLevel = "notice"
-	var annMessage = "message"
-	var annTitle = "title"
-	var annRawDetails = "Raw Details"
-
-	var annPath2 = "cmd/test.go"
-	var annStartLine2 = 5
-	var annLevel2 = "notice"
-	var annMessage2 = "this file is not changed, but has comment"
-	var annTitle2 = "comment on unchanged file"
-	var annRawDetails2 = "Raw Details WAZZUP"
-
-	var outputAnnotations = []*github.CheckRunAnnotation{
-		{
-			Path:            &annPath,
-			StartLine:       &annStartLine,
-			EndLine:         &annStartLine,
-			AnnotationLevel: &annLevel,
-			Message:         &annMessage,
-			Title:           &annTitle,
-			RawDetails:      &annRawDetails,
-		},
-		{
-			Path:            &annPath2,
-			StartLine:       &annStartLine2,
-			EndLine:         &annStartLine2,
-			AnnotationLevel: &annLevel2,
-			Message:         &annMessage2,
-			Title:           &annTitle2,
-			RawDetails:      &annRawDetails2,
-		},
-	}
-
-	check, resp, err := appClient.Checks.CreateCheckRun(ctx, "AnalogJ", "golang_analogj_test", github.CreateCheckRunOptions{
-		Name:       "test-app3",
-		HeadSHA:    "1806d6eb80881cd2adad546f5a52e8d6489557cb",
-		DetailsURL: &detailsUrl,
-		ExternalID: &externalID,
-		Status:     &status,
-		Output: &github.CheckRunOutput{
-			Title:       &outputTitle,
-			Summary:     &outputSummary,
-			Text:        &outputText,
-			Annotations: outputAnnotations,
-		},
-	})
-
-	if err != nil {
-		fmt.Printf("error: %s", err)
-	}
-
-	fmt.Print(check)
-
-	var createMessage = "new file added"
-	var createBranch = "AnalogJ-patch-3"
-
-	//author ghcs-test[bot] <54657905+ghcs-test[bot]@users.noreply.github.com> 1567062088 +0000
-	var authorName = "ghcs-test"                                //name can be anything
-	var authorEmail = "ghcs-test[bot]@users.noreply.github.com" //[bot]required here, but prefix number not requirerd.
-	var author = github.CommitAuthor{
-		Name:  &authorName,
-		Email: &authorEmail,
-	}
-
-	/// TOOD: write a file to a github branch using the commits api
-	created, resp, err := appClient.Repositories.CreateFile(ctx, "AnalogJ", "golang_analogj_test", "netnew11.txt", &github.RepositoryContentFileOptions{
-		Message:   &createMessage,
-		Content:   []byte("This is my content in a byte array,"),
-		Branch:    &createBranch,
-		Author:    &author,
-		Committer: &author,
-	})
-	if err != nil {
-		fmt.Printf("error: %s", err)
-	}
-	fmt.Print(created)
-
-}
+//func main2() {
+//
+//
+//
+//	var createMessage = "new file added"
+//	var createBranch = "AnalogJ-patch-3"
+//
+//	//author ghcs-test[bot] <54657905+ghcs-test[bot]@users.noreply.github.com> 1567062088 +0000
+//	var authorName = "ghcs-test"                                //name can be anything
+//	var authorEmail = "ghcs-test[bot]@users.noreply.github.com" //[bot]required here, but prefix number not requirerd.
+//	var author = github.CommitAuthor{
+//		Name:  &authorName,
+//		Email: &authorEmail,
+//	}
+//
+//	/// TOOD: write a file to a github branch using the commits api
+//	created, resp, err := appClient.Repositories.CreateFile(ctx, "AnalogJ", "golang_analogj_test", "netnew11.txt", &github.RepositoryContentFileOptions{
+//		Message:   &createMessage,
+//		Content:   []byte("This is my content in a byte array,"),
+//		Branch:    &createBranch,
+//		Author:    &author,
+//		Committer: &author,
+//	})
+//	if err != nil {
+//		fmt.Printf("error: %s", err)
+//	}
+//	fmt.Print(created)
+//
+//}

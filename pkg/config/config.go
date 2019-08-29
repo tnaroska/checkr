@@ -30,6 +30,10 @@ func (c *configuration) Init() error {
 	// set to a domain endpoint to use with GitHub Enterprise. BaseURL should
 	// always be specified with a trailing slash.
 	c.SetDefault("base_url", "")
+	c.SetDefault("org", "")
+	c.SetDefault("repo", "")
+	c.SetDefault("pr", "")
+	c.SetDefault("sha", "")
 
 	c.AutomaticEnv()
 	c.SetEnvPrefix("GHCS")

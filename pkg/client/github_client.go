@@ -2,13 +2,12 @@ package client
 
 import (
 	"fmt"
-	"github.com/analogj/ghcs/pkg/config"
+	"github.com/analogj/checkr/pkg/config"
 	"github.com/bradleyfalzon/ghinstallation"
 	"github.com/google/go-github/github"
 	"net/http"
 )
 
-//"/Users/jason/repos/gopath/src/github.com/analogj/ghcs/ghcs-test.2019-08-28.private-key.pem"
 func GetJwtClient(appConfig config.Interface) (*github.Client, error) {
 	// Wrap the shared transport for use with defined application and installation IDs
 

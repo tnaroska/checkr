@@ -26,17 +26,17 @@ type configuration struct {
 func (c *configuration) Init() error {
 	c.Viper = viper.New()
 	//set defaults
-	c.SetDefault("details_url", "")
+	//c.SetDefault("details_url", "")
 
 	// Base URL for API requests. Defaults to the public GitHub API, but can be
 	// set to a domain endpoint to use with GitHub Enterprise. BaseURL should
 	// always be specified with a trailing slash.
 	c.SetDefault("base_url", "https://api.github.com/")
 
-	c.SetDefault("org", "")
-	c.SetDefault("repo", "")
-	c.SetDefault("pr", "")
-	c.SetDefault("sha", "")
+	//c.SetDefault("org", "")
+	//c.SetDefault("repo", "")
+	//c.SetDefault("pr", "")
+	//c.SetDefault("sha", "")
 
 	c.AutomaticEnv()
 	c.SetEnvPrefix("CHECKR")
@@ -60,6 +60,10 @@ func (c *configuration) Init() error {
 // This function ensures that the merged config works correctly.
 func (c *configuration) ValidateConfig() error {
 
+	if !c.IsSet("org") || !c.IsSet("repo") {
+		return errors.New("Required flag/environmental variable \"org\" or \"repo\" is not set")
+	}
+
 	if !c.IsSet("pr") && !c.IsSet("sha") {
 		return errors.New("Required flag/environmental variable \"pr\" or \"sha\" is not set")
 	}
@@ -68,8 +72,8 @@ func (c *configuration) ValidateConfig() error {
 		return errors.New("CHECKR_APP_ID is required")
 	}
 
-	if !c.IsSet("private_key") && !c.IsSet("private_key_path") {
-		return errors.New("CHECKR_PRIVATE_KEY or CHECKR_PRIVATE_KEY_PATH is required")
+	if !c.IsSet("private_key_base64") && !c.IsSet("private_key_path") {
+		return errors.New("CHECKR_PRIVATE_KEY_BASE64 or CHECKR_PRIVATE_KEY_PATH is required")
 	}
 
 	baseUrl := c.GetString("base_url")

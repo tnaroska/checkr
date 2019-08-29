@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -14,13 +15,24 @@ import (
 func GetJwtClient(appConfig config.Interface) (*github.Client, error) {
 	// Wrap the shared transport for use with defined application and installation IDs
 
-	appId := appConfig.GetInt("APP_ID")
+	appId := appConfig.GetInt("app_id")
 	var jwtTransport *ghinstallation.AppsTransport
 	var err error
-	if appConfig.IsSet("PRIVATE_KEY_PATH") {
-		jwtTransport, err = ghinstallation.NewAppsTransportKeyFromFile(http.DefaultTransport, appId, appConfig.GetString("PRIVATE_KEY_PATH"))
-	} else if appConfig.IsSet("PRIVATE_KEY") {
-		jwtTransport, err = ghinstallation.NewAppsTransport(http.DefaultTransport, appId, []byte(appConfig.GetString("PRIVATE_KEY")))
+	if appConfig.IsSet("private_key_path") {
+		jwtTransport, err = ghinstallation.NewAppsTransportKeyFromFile(http.DefaultTransport, appId, appConfig.GetString("private_key_path"))
+	} else if appConfig.IsSet("private_key_base64") {
+
+		decodedPrivateKey, err := base64.StdEncoding.DecodeString(appConfig.GetString("private_key_base64"))
+		if err != nil {
+			fmt.Printf("err: %s", err)
+			return nil, err
+		}
+
+		jwtTransport, err = ghinstallation.NewAppsTransport(http.DefaultTransport, appId, []byte(decodedPrivateKey))
+	}
+	if err != nil {
+		fmt.Printf("err: %s", err)
+		return nil, err
 	}
 
 	jwtTransport.BaseURL = strings.TrimSuffix(appConfig.GetString("base_url"), "/")
@@ -47,13 +59,23 @@ func GetJwtClient(appConfig config.Interface) (*github.Client, error) {
 
 func GetAppClient(appConfig config.Interface, installationId int) (*github.Client, error) {
 
-	appId := appConfig.GetInt("APP_ID")
+	appId := appConfig.GetInt("app_id")
 	var appTransport *ghinstallation.Transport
 	var err error
-	if appConfig.IsSet("PRIVATE_KEY_PATH") {
-		appTransport, err = ghinstallation.NewKeyFromFile(http.DefaultTransport, appId, installationId, appConfig.GetString("PRIVATE_KEY_PATH"))
-	} else if appConfig.IsSet("PRIVATE_KEY") {
-		appTransport, err = ghinstallation.New(http.DefaultTransport, appId, installationId, []byte(appConfig.GetString("PRIVATE_KEY")))
+	if appConfig.IsSet("private_key_path") {
+		appTransport, err = ghinstallation.NewKeyFromFile(http.DefaultTransport, appId, installationId, appConfig.GetString("private_key_path"))
+	} else if appConfig.IsSet("private_key_base64") {
+		decodedPrivateKey, err := base64.StdEncoding.DecodeString(appConfig.GetString("private_key_base64"))
+		if err != nil {
+			fmt.Printf("err: %s", err)
+			return nil, err
+		}
+
+		appTransport, err = ghinstallation.New(http.DefaultTransport, appId, installationId, []byte(decodedPrivateKey))
+	}
+	if err != nil {
+		fmt.Printf("err: %s", err)
+		return nil, err
 	}
 
 	appTransport.BaseURL = strings.TrimSuffix(appConfig.GetString("base_url"), "/")

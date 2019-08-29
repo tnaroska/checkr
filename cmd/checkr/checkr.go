@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/analogj/checkr/pkg/actions"
@@ -80,8 +81,14 @@ func main() {
 						config.Set("sha", c.String("sha"))
 					}
 
-					config.Set("org", c.String("org"))
-					config.Set("repo", c.String("repo"))
+					if c.IsSet("full-name") {
+						parts := strings.Split(c.String("full-name"), "/")
+						config.Set("org", parts[0])
+						config.Set("repo", parts[1])
+					} else if c.IsSet("org") && c.IsSet("repo") {
+						config.Set("org", c.String("org"))
+						config.Set("repo", c.String("repo"))
+					}
 
 					payloadPath, err := utils.ExpandPath(c.String("payload-path"))
 					if err != nil {
@@ -102,14 +109,16 @@ func main() {
 				},
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:     "org, o",
-						Usage:    "Github repository owner/organization name",
-						Required: true,
+						Name:  "org, o",
+						Usage: "Github repository owner/organization name",
 					},
 					&cli.StringFlag{
-						Name:     "repo, r",
-						Usage:    "Github repository name",
-						Required: true,
+						Name:  "repo, r",
+						Usage: "Github repository name",
+					},
+					&cli.StringFlag{
+						Name:  "full-name, fn",
+						Usage: "Github full repository name, eg. ORG_NAME/REPO_NAME",
 					},
 
 					&cli.StringFlag{

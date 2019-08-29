@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"github.com/analogj/checkr/pkg/utils"
 	"github.com/spf13/viper"
 )
 
@@ -40,10 +41,16 @@ func (c *configuration) Init() error {
 	c.AutomaticEnv()
 	c.SetEnvPrefix("GHCS")
 
-	//c.SetConfigName("drawbridge")
-	//c.AddConfigPath("$HOME/")
-
-	//CLI options will be added via the `Set()` function
+	if c.IsSet("private_key_path") {
+		privateKeyPath, err := utils.ExpandPath(c.GetString("private_key_path"))
+		if err != nil {
+			return err
+		}
+		if !utils.FileExists(privateKeyPath) {
+			return errors.New("GHCS_PRIVATE_KEY_PATH is invalid")
+		}
+		c.Set("private_key_path", privateKeyPath)
+	}
 
 	fmt.Printf("%s", c.AllSettings())
 	return nil

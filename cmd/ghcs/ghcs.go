@@ -126,4 +126,28 @@ func main() {
 
 	fmt.Print(check)
 
+	var createMessage = "new file added"
+	var createBranch = "AnalogJ-patch-3"
+
+	//author ghcs-test[bot] <54657905+ghcs-test[bot]@users.noreply.github.com> 1567062088 +0000
+	var authorName = "ghcs-test"                                //name can be anything
+	var authorEmail = "ghcs-test[bot]@users.noreply.github.com" //[bot]required here, but prefix number not requirerd.
+	var author = github.CommitAuthor{
+		Name:  &authorName,
+		Email: &authorEmail,
+	}
+
+	/// TOOD: write a file to a github branch using the commits api
+	created, resp, err := appClient.Repositories.CreateFile(ctx, "AnalogJ", "golang_analogj_test", "netnew8.txt", &github.RepositoryContentFileOptions{
+		Message:   &createMessage,
+		Content:   []byte("This is my content in a byte array,"),
+		Branch:    &createBranch,
+		Author:    &author,
+		Committer: &author,
+	})
+	if err != nil {
+		fmt.Printf("error: %s", err)
+	}
+	fmt.Print(created)
+
 }

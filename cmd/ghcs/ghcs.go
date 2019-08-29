@@ -57,11 +57,11 @@ func main() {
 
 			color.New(color.FgGreen).Fprintf(c.App.Writer, fmt.Sprintf(utils.StripIndent(
 				`
-			  ooooooo8 ooooo ooooo  oooooooo8  oooooooo8  
-			o888    88  888   888 o888     88 888         
-			888    oooo 888ooo888 888          888oooooo  
-			888o    88  888   888 888o     oo         888 
-			 888ooo888 o888o o888o 888oooo88  o88oooo888
+			  oooooooo8 oooo                             oooo                    
+			o888     88  888ooooo   ooooooooo8  ooooooo   888  ooooo oo oooooo   
+			888          888   888 888oooooo8 888     888 888o888     888    888 
+			888o     oo  888   888 888        888         8888 88o    888        
+			 888oooo88  o888o o888o  88oooo888  88ooo888 o888o o888o o888o
 			%s
 
 			`), subtitle))

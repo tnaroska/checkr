@@ -64,76 +64,112 @@ func (r *RunAction) Create(payloadPath string) error {
 		headSha = r.Config.GetString("headSha")
 	}
 
-	//var detailsUrl = "https://github.com/AnalogJ/ghcs"
-	//var externalID = "externalUId"
-	//var status = "in_progress"
-	//
-	//var outputTitle = "output TItle2"
-	//var outputSummary = "output Summary2"
-	//var outputText = "# output Text2\n This is the output details2"
-	//
-	//var annPath = "README.md"
-	//var annStartLine = 1
-	//var annLevel = "notice"
-	//var annMessage = "message"
-	//var annTitle = "title"
-	//var annRawDetails = "Raw Details"
-	//
-	//var annPath2 = "cmd/test.go"
-	//var annStartLine2 = 5
-	//var annLevel2 = "notice"
-	//var annMessage2 = "this file is not changed, but has comment"
-	//var annTitle2 = "comment on unchanged file"
-	//var annRawDetails2 = "Raw Details WAZZUP"
-	//
-	//var outputAnnotations = []*github.CheckRunAnnotation{
-	//	{
-	//		Path:            &annPath,
-	//		StartLine:       &annStartLine,
-	//		EndLine:         &annStartLine,
-	//		AnnotationLevel: &annLevel,
-	//		Message:         &annMessage,
-	//		Title:           &annTitle,
-	//		RawDetails:      &annRawDetails,
-	//	},
-	//	{
-	//		Path:            &annPath2,
-	//		StartLine:       &annStartLine2,
-	//		EndLine:         &annStartLine2,
-	//		AnnotationLevel: &annLevel2,
-	//		Message:         &annMessage2,
-	//		Title:           &annTitle2,
-	//		RawDetails:      &annRawDetails2,
-	//	},
-	//}
-
-	//github.CreateCheckRunOptions{
-	//	Name:       "test-app4",
-	//	HeadSHA:    headSha,
-	//	DetailsURL: &detailsUrl,
-	//	ExternalID: &externalID,
-	//	Status:     &status,
-	//	Output: &github.CheckRunOutput{
-	//		Title:       &outputTitle,
-	//		Summary:     &outputSummary,
-	//		Text:        &outputText,
-	//		Annotations: outputAnnotations,
-	//	},
-	//}
-
 	checkRun.HeadSHA = headSha
 	if r.Config.IsSet("details_url") {
 		var detailsUrl = r.Config.GetString("details_url")
 		checkRun.DetailsURL = &detailsUrl
 	}
 
-	check, resp, err := appClient.Checks.CreateCheckRun(ctx, r.Config.GetString("org"), r.Config.GetString("repo"), checkRun)
+	if len(checkRun.Output.Annotations) > 50 {
+		//we need to chunk the check run annotations into groups of 50
 
-	if err != nil {
-		fmt.Printf("error: %s", err)
+		chunkedAnnotations := chunkAnnotations(checkRun.Output.Annotations, 50)
+
+		//get the first chunk
+		firstAnnotationChunk, chunkedAnnotations := chunkedAnnotations[0], chunkedAnnotations[1:]
+
+		//get the last chunk
+		lastAnnotationChunk, chunkedAnnotations := chunkedAnnotations[len(chunkedAnnotations)-1], chunkedAnnotations[:len(chunkedAnnotations)-1]
+
+		//save original values
+		origCompletedAt := checkRun.GetCompletedAt()
+		origStatus := checkRun.GetStatus()
+		origConclusion := checkRun.GetConclusion()
+
+		//set overrides
+		inProgressStatus := "in_progress"
+		checkRun.CompletedAt = nil
+		checkRun.Status = &inProgressStatus
+		checkRun.Conclusion = nil
+
+		checkRun.Output.Annotations = firstAnnotationChunk
+		firstCheckRun, err := createCheckRun(appClient, ctx, r.Config.GetString("org"), r.Config.GetString("repo"), checkRun)
+
+		if err != nil {
+			return err
+		}
+
+		for _, chunk := range chunkedAnnotations {
+			updateCheckRunOptions := github.UpdateCheckRunOptions{
+				Name:        checkRun.Name,
+				HeadBranch:  &checkRun.HeadBranch,
+				HeadSHA:     &checkRun.HeadSHA,
+				DetailsURL:  checkRun.DetailsURL,
+				ExternalID:  checkRun.ExternalID,
+				Status:      checkRun.Status,
+				Conclusion:  checkRun.Conclusion,
+				CompletedAt: nil,
+				Output:      checkRun.Output,
+			}
+
+			updateCheckRunOptions.Output.Annotations = chunk
+
+			_, err := updateCheckRun(appClient, ctx, r.Config.GetString("org"), r.Config.GetString("repo"), firstCheckRun.GetID(), updateCheckRunOptions)
+
+			if err != nil {
+				return err
+			}
+		}
+
+		//now that we've finished uploading all chunks, lets submit the last peice and restore the correct complete status info.
+
+		lastCheckRunOptions := github.UpdateCheckRunOptions{
+			Name:        checkRun.Name,
+			HeadBranch:  &checkRun.HeadBranch,
+			HeadSHA:     &checkRun.HeadSHA,
+			DetailsURL:  checkRun.DetailsURL,
+			ExternalID:  checkRun.ExternalID,
+			Status:      &origStatus,
+			Conclusion:  &origConclusion,
+			CompletedAt: &origCompletedAt,
+			Output:      checkRun.Output,
+		}
+		lastCheckRunOptions.Output.Annotations = lastAnnotationChunk
+
+		_, err = updateCheckRun(appClient, ctx, r.Config.GetString("org"), r.Config.GetString("repo"), firstCheckRun.GetID(), lastCheckRunOptions)
+
+		return err
+
+	} else {
+		_, err := createCheckRun(appClient, ctx, r.Config.GetString("org"), r.Config.GetString("repo"), checkRun)
+		return err
 	}
 
-	fmt.Print(check)
-
 	return nil
+}
+
+func createCheckRun(appClient *github.Client, ctx context.Context, owner, repo string, checkRun github.CreateCheckRunOptions) (*github.CheckRun, error) {
+	createdCheckRun, _, err := appClient.Checks.CreateCheckRun(ctx, owner, repo, checkRun)
+	return createdCheckRun, err
+}
+
+func updateCheckRun(appClient *github.Client, ctx context.Context, owner, repo string, checkRunId int64, checkRunUpdate github.UpdateCheckRunOptions) (*github.CheckRun, error) {
+	updatedCheckRun, _, err := appClient.Checks.UpdateCheckRun(ctx, owner, repo, checkRunId, checkRunUpdate)
+	return updatedCheckRun, err
+}
+
+func chunkAnnotations(annotations []*github.CheckRunAnnotation, chunkSize int) [][]*github.CheckRunAnnotation {
+	var divided [][]*github.CheckRunAnnotation
+
+	for i := 0; i < len(annotations); i += chunkSize {
+		end := i + chunkSize
+
+		if end > len(annotations) {
+			end = len(annotations)
+		}
+
+		divided = append(divided, annotations[i:end])
+	}
+
+	return divided
 }

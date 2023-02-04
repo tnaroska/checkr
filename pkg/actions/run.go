@@ -8,7 +8,7 @@ import (
 
 	"github.com/analogj/checkr/pkg/client"
 	"github.com/analogj/checkr/pkg/config"
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v50/github"
 )
 
 type RunAction struct {
@@ -35,6 +35,10 @@ func (r *RunAction) Create(payloadPath string) error {
 
 	//create jwt Client
 	jwtClient, err := client.GetJwtClient(r.Config)
+	if err != nil {
+		fmt.Printf("error: %s", err)
+		return err
+	}
 
 	// get App installation information for this repo.
 	appService := jwtClient.Apps
@@ -47,7 +51,11 @@ func (r *RunAction) Create(payloadPath string) error {
 	fmt.Print(appInst)
 
 	//create app client
-	appClient, err := client.GetAppClient(r.Config, int(*appInst.ID))
+	appClient, err := client.GetAppClient(r.Config, *appInst.ID)
+	if err != nil {
+		fmt.Printf("error: %s", err)
+		return err
+	}
 
 	// if we don't know the SHA that we're adding the check run to, lets get it from the PR
 	var headSha string
@@ -102,8 +110,6 @@ func (r *RunAction) Create(payloadPath string) error {
 		for _, chunk := range chunkedAnnotations {
 			updateCheckRunOptions := github.UpdateCheckRunOptions{
 				Name:        checkRun.Name,
-				HeadBranch:  &checkRun.HeadBranch,
-				HeadSHA:     &checkRun.HeadSHA,
 				DetailsURL:  checkRun.DetailsURL,
 				ExternalID:  checkRun.ExternalID,
 				Status:      checkRun.Status,
@@ -125,8 +131,6 @@ func (r *RunAction) Create(payloadPath string) error {
 
 		lastCheckRunOptions := github.UpdateCheckRunOptions{
 			Name:        checkRun.Name,
-			HeadBranch:  &checkRun.HeadBranch,
-			HeadSHA:     &checkRun.HeadSHA,
 			DetailsURL:  checkRun.DetailsURL,
 			ExternalID:  checkRun.ExternalID,
 			Status:      &origStatus,
@@ -144,8 +148,6 @@ func (r *RunAction) Create(payloadPath string) error {
 		_, err := createCheckRun(appClient, ctx, r.Config.GetString("org"), r.Config.GetString("repo"), checkRun)
 		return err
 	}
-
-	return nil
 }
 
 func createCheckRun(appClient *github.Client, ctx context.Context, owner, repo string, checkRun github.CreateCheckRunOptions) (*github.CheckRun, error) {

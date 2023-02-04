@@ -9,13 +9,13 @@ import (
 
 	"github.com/analogj/checkr/pkg/config"
 	"github.com/bradleyfalzon/ghinstallation"
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v50/github"
 )
 
 func GetJwtClient(appConfig config.Interface) (*github.Client, error) {
 	// Wrap the shared transport for use with defined application and installation IDs
 
-	appId := appConfig.GetInt("app_id")
+	appId := appConfig.GetInt64("app_id")
 	var jwtTransport *ghinstallation.AppsTransport
 	var err error
 	if appConfig.IsSet("private_key_path") {
@@ -57,9 +57,9 @@ func GetJwtClient(appConfig config.Interface) (*github.Client, error) {
 	return jwtClient, nil
 }
 
-func GetAppClient(appConfig config.Interface, installationId int) (*github.Client, error) {
+func GetAppClient(appConfig config.Interface, installationId int64) (*github.Client, error) {
 
-	appId := appConfig.GetInt("app_id")
+	appId := appConfig.GetInt64("app_id")
 	var appTransport *ghinstallation.Transport
 	var err error
 	if appConfig.IsSet("private_key_path") {

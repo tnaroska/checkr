@@ -17,3 +17,4 @@ scm_release_assets:
     artifact_name: checkr-darwin-amd64
   - local_path: checkr-windows-amd64.exe
     artifact_name: checkr-windows-amd64.exe
+
